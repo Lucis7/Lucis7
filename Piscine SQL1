@@ -1,0 +1,109 @@
+ex01 Создать таблицу с именованными узлами, используя структуру {point1, point2, cost}, и заполните данные на основе рисунка (помните, что между 2 узлами есть прямые и обратные пути). 
+Пожалуйста, напишите SQL-выражение, которое возвращает все туры (т. е. пути) с минимальной стоимостью поездки, если мы начнем с города "a". Помните, вам нужно найти самый дешевый способ посетить все города и вернуться в исходную точку. Например, тур выглядит как a -> b -> c -> d -> a.
+Пожалуйста, отсортируйте данные по total_cost, а затем по tour.
+
+
+
+CREATE TABLE nodes (
+    point1 VARCHAR NOT NULL,
+    point2 VARCHAR NOT NULL,
+    cost INT NOT NULL
+);
+
+INSERT INTO nodes VALUES ('a', 'b', 10);
+INSERT INTO nodes VALUES ('b', 'a', 10);
+INSERT INTO nodes VALUES ('b', 'c', 35);
+INSERT INTO nodes VALUES ('c', 'b', 35);
+INSERT INTO nodes VALUES ('a', 'c', 15);
+INSERT INTO nodes VALUES ('c', 'a', 15);
+INSERT INTO nodes VALUES ('a', 'd', 20);
+INSERT INTO nodes VALUES ('d', 'a', 20);
+INSERT INTO nodes VALUES ('b', 'd', 25);
+INSERT INTO nodes VALUES ('d', 'b', 25);
+INSERT INTO nodes VALUES ('d', 'c', 30);
+INSERT INTO nodes VALUES ('c', 'd', 30);
+
+WITH tab AS (
+
+    WITH RECURSIVE _n AS (
+            point1,
+            point2,
+            cost,
+            1 as level,
+            array[point1] AS path,
+            FALSE AS cycle,
+            array[cost] AS costs
+        from nodes
+        where point1 = 'a'
+
+        union all
+
+        select
+            nodes.point1,
+            nodes.point2,
+            nodes.cost + _n.cost as cost,
+            _n.level + 1 as level,
+            _n.path || nodes.point1 AS path,
+            nodes.point1 = ANY(_n.path) AS cycle,
+            _n.costs || nodes.cost AS costs
+        from nodes
+        inner join _n on _n.point2 = nodes.point1 and not cycle
+    )
+
+    select
+        cost - costs[5] as total_cost,
+        path as tour
+    from _n
+    where level = 5 and 'a' = ANY(path) and 'b' = ANY(path) and 'c' = ANY(path) and 'd' = ANY(path) and path[1] = path[5]
+    order by cost, path
+)
+
+SELECT DISTINCT *
+FROM tab
+WHERE total_cost = (SELECT MIN(total_cost) FROM tab)
+ORDER BY 1,2;
+
+ex02
+
+Пожалуйста, добавьте способ просмотра дополнительных строк с самой дорогой стоимостью в SQL из предыдущего упражнения. Взгляните на образец данных ниже. Пожалуйста, отсортируйте данные по total_cost, а затем по trip.
+
+
+WITH tab AS (
+    WITH RECURSIVE recur AS (
+     SELECT point1,
+            point2,
+            cost,
+            1 as level,
+            array[point1] AS path,
+            FALSE AS cycle,
+            array[cost] AS costs
+        from nodes
+        where point1 = 'a'
+
+        union all
+
+        select
+            nodes.point1,
+            nodes.point2,
+            nodes.cost + recur.cost as cost,
+            recur.level + 1 as level,
+            recur.path || nodes.point1 AS path,
+            nodes.point1 = ANY(recur.path) AS cycle,
+            recur.costs || nodes.cost AS costs
+        from nodes
+        inner join recur on recur.point2 = nodes.point1 and not cycle
+    )
+
+    select
+        cost - costs[5] as total_cost,
+        path as tour
+    from recur
+    where level = 5 and 'a' = ANY(path) and 'b' = ANY(path) and 'c' = ANY(path) and 'd' = ANY(path) and path[1] = path[5]
+    order by cost, path
+)
+
+SELECT DISTINCT *
+FROM tab
+WHERE total_cost = (SELECT MIN(total_cost) FROM tab)
+   OR total_cost = (SELECT MAX(total_cost) FROM tab)
+ORDER BY 1,2;
