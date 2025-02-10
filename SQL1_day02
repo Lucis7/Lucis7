@@ -1,0 +1,115 @@
+day02_ex00
+
+SELECT name, rating 
+FROM pizzeria 
+WHERE pizzeria.id NOT IN (SELECT pizzeria_id FROM person_visits 
+			 WHERE person_visits.pizzeria_id = pizzeria.id AND person_visits.pizzeria_id IS NOT NULL);
+day02_ex01
+
+SELECT days::DATE AS missing_date
+FROM generate_series('2022-01-01', '2022-01-10', interval '1 day') AS days
+EXCEPT 
+SELECT visit_date FROM person_visits
+WHERE person_id IN (1,2) AND visit_date BETWEEN '2022-01-01' AND '2022-01-10'
+ORDER BY missing_date;
+
+day02_ex02.sql
+
+WITH date_visits AS (
+    SELECT * 
+    FROM person_visits 
+    WHERE visit_date BETWEEN '2022-01-01' AND '2022-01-03'
+)
+SELECT COALESCE(person.name, '-') AS person_name,
+    date_visits.visit_date, COALESCE(pizzeria.name, '-') AS pizzeria_name
+FROM date_visits
+FULL JOIN pizzeria ON date_visits.pizzeria_id = pizzeria.id
+FULL JOIN person ON date_visits.person_id = person.id
+ORDER BY 1, 2, 3;
+
+day02_ex03
+
+WITH cte_missing_dates(missing_date) AS (
+    (SELECT days::DATE AS missing_date
+               FROM generate_series('2022-01-01', '2022-01-10', interval '1 day') AS days
+    ))
+SELECT missing_date FROM cte_missing_dates
+EXCEPT 
+SELECT visit_date FROM person_visits
+WHERE person_id IN (1,2) AND visit_date BETWEEN '2022-01-01' AND '2022-01-10'
+ORDER BY missing_date;
+
+day02_ex04
+
+SELECT pizza_name, pizzeria.name as pizzeria_name, price
+FROM 
+(SELECT * FROM menu
+WHERE menu.pizza_name = 'mushroom pizza' OR menu.pizza_name =  'pepperoni pizza') as pizza_name
+JOIN pizzeria ON pizzeria.id = pizza_name.pizzeria_id
+ORDER BY pizza_name, pizzeria_name;
+
+day02_ex05
+
+SELECT name
+FROM person
+WHERE gender = 'female' AND age > 25
+ORDER BY name;
+
+day02_ex06
+
+SELECT menu.pizza_name, pizzeria.name AS pizzeria_name
+FROM person_order
+JOIN menu ON person_order.menu_id = menu.id
+JOIN pizzeria ON menu.pizzeria_id= pizzeria.id
+JOIN person ON person_order.person_id = person.id
+WHERE person.name = 'Anna' OR person.name = 'Denis'
+ORDER BY pizza_name, pizzeria_name;
+
+day02_ex07
+
+SELECT pizzeria.name
+FROM person_visits
+JOIN pizzeria ON pizzeria.id = person_visits.pizzeria_id
+JOIN menu ON menu.pizzeria_id=pizzeria.id
+JOIN person ON person.id = person_visits.person_id
+WHERE visit_date = '2022-01-08' AND person.name = 'Dmitriy'
+AND menu.price < 800;
+
+day02_ex08
+
+SELECT person.name as name
+FROM person_order
+JOIN person ON person.id = person_order.person_id
+JOIN menu ON menu.id = person_order.menu_id
+WHERE person.gender = 'male' AND address IN ('Moscow', 'Samara')
+AND pizza_name IN ('pepperoni pizza', 'mushroom pizza')
+ORDER BY name desc;
+
+day02_ex09
+
+SELECT person.name as name
+FROM person_order
+JOIN person ON person.id = person_order.person_id
+JOIN menu ON menu.id = person_order.menu_id
+WHERE person.gender = 'female'
+AND menu.pizza_name = 'cheese pizza'
+AND person.id IN (
+    SELECT person_id
+    FROM person_order
+    JOIN menu ON menu.id = person_order.menu_id
+    WHERE menu.pizza_name = 'pepperoni pizza';
+)
+ORDER BY name;
+
+day02_ex10
+
+SELECT
+    p1.name person_name1,
+    p2.name person_name2,
+    p1.address common_address
+FROM person p1
+CROSS JOIN person p2
+WHERE p1.name <> p2.name
+    AND p1.address = p2.address
+    AND p1.id > p2.id
+ORDER BY person_name1, person_name2, common_address;
